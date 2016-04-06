@@ -121,26 +121,28 @@ AverageDistance = round(TotalDistance/NumberOfSamples,2)
 
 WaterHeight = SensorHeight - AverageDistance
 Gallons = round(WaterHeight*GallonsPerCentimeter,1)
+SheetURL = SheetURL + "&SensorHeight=" + str(SensorHeight) + "&WaterHeight=" + str(WaterHeight) + "&Gallons=" + str(Gallons) + "&DistanceToWater=" + str(AverageDistance) + "&MeasurementsTaken=" + str(NumberOfSamples) + "&SensorNumber=" + str(SensorNumber)
+ThingSpeakURL = ThingSpeakURL + str(Gallons)
+
 if TestMode == 1:
  print "Avg Distance:",AverageDistance
  print "Water Height:",WaterHeight,"Gallons:",Gallons
- print "URL:",SheetURL
-
-SheetURL = SheetURL + "&SensorHeight=" + str(SensorHeight) + "&WaterHeight=" + str(WaterHeight) + "&Gallons=" + str(Gallons) + "&DistanceToWater=" + str(AverageDistance) + "&MeasurementsTaken=" + str(NumberOfSamples) + "&SensorNumber=" + str(SensorNumber)
+ print "GoogleSheetURL:",SheetURL
+ print "ThingSpeakURL:",ThingSpeakURL
 
 DataLogFileEntry = TimeStampDate + " " + TimeStampTime + "," + str(SensorHeight) + "," + str(WaterHeight) + "," + str(NumberOfSamples) + "," + str(AverageDistance) + "," + str(Gallons) + "\n"
 DataLogFile = open (DataLogFileName,"a")
 DataLogFile.write(DataLogFileEntry)
 DataLogFile.close()
 
-Response = urllib.urlopen(SheetURL).read()
+if TestMode == 0:
+ Response = urllib.urlopen(SheetURL).read()
 
-if Response == GooglePostSuccess:
- ProgramLogFile.write(time.asctime() + " Google Post Succeeded-> " + SheetURL + "\n")
+ if Response == GooglePostSuccess:
+  ProgramLogFile.write(time.asctime() + " Google Post Succeeded-> " + SheetURL + "\n")
 
-ThingSpeakURL = ThingSpeakURL + str(Gallons)
-ThingSpeakResponse = urllib.urlopen(ThingSpeakURL).read()
-
+ ThingSpeakResponse = urllib.urlopen(ThingSpeakURL).read()
+#end if
 
 ProgramLogFile.write (time.asctime() + " ----- Program complete.-----\n")
 ProgramLogFile.close()
