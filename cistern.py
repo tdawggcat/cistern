@@ -24,8 +24,8 @@ NumberOfSamples = int(sys.argv[2])
 TestMode = int(sys.argv[3])
 
 #Measurment adjustment after real world measurements are taken
-Sensor1DistanceOffset = 0
-Sensor2DistanceOffset = 0
+Sensor1DistanceOffset = -0.8
+Sensor2DistanceOffset = -1.15
 
 #Define GPIO pins for sensor relays and delay after powering relays
 Sensor1SwitchPin = 5
@@ -55,7 +55,8 @@ if SensorNumber == 2:
 
 
 #Mounting height of sensor (cm)
-SensorHeight = 289.56
+#SensorHeight = 289.56
+SensorHeight = 289.4
 
 #Gallons per cm, based on 5000 gallons per foot
 GallonsPerCentimeter = 164.04
