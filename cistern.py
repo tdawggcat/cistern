@@ -13,7 +13,9 @@ TriggerDuration = 0.00001
 TotalDistance = 0
 MaxDistance = 0
 MinDistance = 100000
-SpeedOfSound = 34029
+#SpeedOfSound = 34029
+#Speed of sound adjusted to cistern elevation per https://www.daftlogic.com/sandbox-google-maps-find-altitude.htm
+SpeedOfSound = 33900
 DataLogFileName = "/home/pi/cistern/DataLogFile"
 ProgramLogFileName = "/home/pi/cistern/ProgramLogFile"
 GooglePostSuccess = "Data appended successfully."
@@ -88,7 +90,7 @@ for x in range (1,NumberOfSamples+3):
 
  while GPIO.input(ECHO)==1:
   PulseEnd = time.time()
-
+ 
  PulseDuration = PulseEnd - PulseStart
 
  Distance = round((PulseDuration * (SpeedOfSound / 2)) + DistanceOffset, 2)
@@ -104,6 +106,8 @@ for x in range (1,NumberOfSamples+3):
   print x,"- Distance:",Distance,"cm Total:",TotalDistance,"cm Max:",MaxDistance,"cm Min:",MinDistance,"cm"
 # End loop
 
+ProgramLogFile.write (time.asctime() + " Measurements complete.\n")
+
 if SensorNumber == 2:
  #Need to turn off relays if the sensor is #2
  GPIO.output(Sensor1SwitchPin,GPIO.HIGH)
@@ -111,6 +115,7 @@ if SensorNumber == 2:
  if TestMode == 1:
   print "Both relays off."
  time.sleep(1)
+ ProgramLogFile.write (time.asctime() + " Turned sensors off.\n")
 #end if
 GPIO.cleanup()
 
@@ -125,18 +130,21 @@ Gallons = round(WaterHeight*GallonsPerCentimeter,1)
 SheetURL = SheetURL + "&SensorHeight=" + str(SensorHeight) + "&WaterHeight=" + str(WaterHeight) + "&Gallons=" + str(Gallons) + "&DistanceToWater=" + str(AverageDistance) + "&MeasurementsTaken=" + str(NumberOfSamples) + "&SensorNumber=" + str(SensorNumber)
 ThingSpeakURL = ThingSpeakURL + str(Gallons)
 
+ProgramLogFile.write (time.asctime() + " SheetURL:" + SheetURL  + " .\n")
+ProgramLogFile.write (time.asctime() + " ThingSpeakURL:" + ThingSpeakURL  + " .\n")
+
+
 if TestMode == 1:
  print "Avg Distance:",AverageDistance
  print "Water Height:",WaterHeight,"Gallons:",Gallons
  print "GoogleSheetURL:",SheetURL
  print "ThingSpeakURL:",ThingSpeakURL
 
-DataLogFileEntry = TimeStampDate + " " + TimeStampTime + "," + str(SensorHeight) + "," + str(WaterHeight) + "," + str(NumberOfSamples) + "," + str(AverageDistance) + "," + str(Gallons) + "\n"
-DataLogFile = open (DataLogFileName,"a")
-DataLogFile.write(DataLogFileEntry)
-DataLogFile.close()
-
 if TestMode == 0:
+ DataLogFileEntry = TimeStampDate + " " + TimeStampTime + "," + str(SensorHeight) + "," + str(WaterHeight) + "," + str(NumberOfSamples) + "," + str(AverageDistance) + "," + str(Gallons) + "\n"
+ DataLogFile = open (DataLogFileName,"a")
+ DataLogFile.write(DataLogFileEntry)
+ DataLogFile.close()
  Response = urllib.urlopen(SheetURL).read()
 
  if Response == GooglePostSuccess:
