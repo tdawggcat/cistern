@@ -139,8 +139,9 @@ if TestMode == 1:
  print "Water Height:",WaterHeight,"Gallons:",Gallons
  print "GoogleSheetURL:",SheetURL
  print "ThingSpeakURL:",ThingSpeakURL
+#end if test mode == 1
 
-if TestMode == 0:
+if ((TestMode == 0) and (Gallons < 50000)):
  DataLogFileEntry = TimeStampDate + " " + TimeStampTime + "," + str(SensorHeight) + "," + str(WaterHeight) + "," + str(NumberOfSamples) + "," + str(AverageDistance) + "," + str(Gallons) + "\n"
  DataLogFile = open (DataLogFileName,"a")
  DataLogFile.write(DataLogFileEntry)
