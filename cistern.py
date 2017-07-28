@@ -1,11 +1,20 @@
 #!/usr/bin/python
 
 import RPi.GPIO as GPIO
+import os
+import glob
 import time
 import sys
 import urllib
 
 GPIO.setmode(GPIO.BCM)
+os.system('modprobe w1-gpio')
+os.system('modprobe w1-therm')
+
+TempFileBrownCisternAir = '/sys/bus/w1/devices/28-800000081184/w1_slave'
+TempFileOrangeOutsideAir = '/sys/bus/w1/devices/28-00152c26fdee/w1_slave'
+TempFileGreenOutsideOnCistern = '/sys/bus/w1/devices/28-0315a4acc8ff/w1_slave'
+TempFileBlueWater = '/sys/bus/w1/devices/28-00152335c4ee/w1_slave'
 
 #GeneralVariables
 TimeToSleepAfterTRIGFalse = .55
@@ -33,15 +42,48 @@ Sensor2DistanceOffset = -1.15
 Sensor1SwitchPin = 5
 Sensor2SwitchPin = 6
 TimeToSleepAfterPoweringSensor = .5
+# 28 Jul 2017 - Both sensors use the same trigger
+TRIG = 23
+
+#Function for reading the temperature files
+def read_temp(DeviceFile):
+    f = open(DeviceFile, 'r')
+    lines = f.readlines()
+    f.close()
+    while lines[0].strip()[-3:] != 'YES':
+        time.sleep(0.2)
+        lines = read_temp_raw()
+    equals_pos = lines[1].find('t=')
+    if equals_pos != -1:
+        temp_string = lines[1][equals_pos+2:]
+        temp_c = float(temp_string) / 1000.0
+        temp_f = temp_c * 9.0 / 5.0 + 32.0
+        return temp_f
+#End Temperature function
+
+time.sleep(1)
+BrownCisternAir = round(read_temp(TempFileBrownCisternAir),1)
+time.sleep(1)
+OrangeOutsideAir = round(read_temp(TempFileOrangeOutsideAir),1)
+time.sleep(1)
+GreenOutsideOnCistern = round(read_temp(TempFileGreenOutsideOnCistern),1)
+time.sleep(1)
+BlueWater = round(read_temp(TempFileBlueWater),1)
+
+if TestMode == 1:
+ print "Cistern Air        : ",BrownCisternAir
+ print "Outside Air        : ",OrangeOutsideAir
+ print "Outside On Cistern : ",GreenOutsideOnCistern
+ print "Water              : ",BlueWater
+#end if
+
 
 if SensorNumber == 1:
- TRIG = 23
  ECHO = 12
  DistanceOffset = Sensor1DistanceOffset
 #end if
 
 if SensorNumber == 2:
- TRIG = 24
  ECHO = 20
  DistanceOffset = Sensor2DistanceOffset
 
@@ -125,10 +167,17 @@ if TestMode == 1:
 TotalDistance = TotalDistance - (MinDistance + MaxDistance)
 AverageDistance = round(TotalDistance/NumberOfSamples,2)
 
+
+#BrownCisternAir = read_temp(TempFileBrownCisternAir)
+#OrangeOutsideAir = read_temp(TempFileOrangeOutsideAir)
+#GreenOutsideOnCistern = read_temp(TempFileGreenOutsideOnCistern)
+#BlueWater = read_temp(TempFileBlueWater)
+
+
 WaterHeight = SensorHeight - AverageDistance
 Gallons = round(WaterHeight*GallonsPerCentimeter,1)
-SheetURL = SheetURL + "&SensorHeight=" + str(SensorHeight) + "&WaterHeight=" + str(WaterHeight) + "&Gallons=" + str(Gallons) + "&DistanceToWater=" + str(AverageDistance) + "&MeasurementsTaken=" + str(NumberOfSamples) + "&SensorNumber=" + str(SensorNumber)
-ThingSpeakURL = ThingSpeakURL + str(Gallons)
+SheetURL = SheetURL + "&SensorHeight=" + str(SensorHeight) + "&WaterHeight=" + str(WaterHeight) + "&Gallons=" + str(Gallons) + "&DistanceToWater=" + str(AverageDistance) + "&MeasurementsTaken=" + str(NumberOfSamples) + "&SensorNumber=" + str(SensorNumber) + "&WaterTemp=" + str(BlueWater) + "&CisternAirTemp=" + str(BrownCisternAir) + "&OutsideAirTemp=" + str(OrangeOutsideAir) + "&OutsideCisternSurface=" + str(GreenOutsideOnCistern)
+ThingSpeakURL = ThingSpeakURL + str(Gallons) + "&field2=" + str(BlueWater) + "&field3=" + str(BrownCisternAir) + "&field4=" + str(OrangeOutsideAir) + "&field5=" + str(GreenOutsideOnCistern)
 
 ProgramLogFile.write (time.asctime() + " SheetURL:" + SheetURL  + " .\n")
 ProgramLogFile.write (time.asctime() + " ThingSpeakURL:" + ThingSpeakURL  + " .\n")
@@ -142,7 +191,7 @@ if TestMode == 1:
 #end if test mode == 1
 
 if ((TestMode == 0) and (Gallons < 50000)):
- DataLogFileEntry = TimeStampDate + " " + TimeStampTime + "," + str(SensorHeight) + "," + str(WaterHeight) + "," + str(NumberOfSamples) + "," + str(AverageDistance) + "," + str(Gallons) + "\n"
+ DataLogFileEntry = TimeStampDate + " " + TimeStampTime + "," + str(SensorHeight) + "," + str(WaterHeight) + "," + str(NumberOfSamples) + "," + str(AverageDistance) + "," + str(Gallons) + "," + str(SensorNumber) + "," + str(BlueWater) + "," + str(BrownCisternAir) + "," + str(OrangeOutsideAir) + "," + str(GreenOutsideOnCistern) + "\n"
  DataLogFile = open (DataLogFileName,"a")
  DataLogFile.write(DataLogFileEntry)
  DataLogFile.close()
