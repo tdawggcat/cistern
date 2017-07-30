@@ -7,17 +7,20 @@ import time
 import sys
 import urllib
 
+# Global definitions and system calls
 GPIO.setmode(GPIO.BCM)
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
 
+############################################################################
+#GeneralVariables
 TempFileBrownCisternAir = '/sys/bus/w1/devices/28-800000081184/w1_slave'
 TempFileOrangeOutsideAir = '/sys/bus/w1/devices/28-00152c26fdee/w1_slave'
 TempFileGreenOutsideOnCistern = '/sys/bus/w1/devices/28-0315a4acc8ff/w1_slave'
 TempFileBlueWater = '/sys/bus/w1/devices/28-00152335c4ee/w1_slave'
+MaxTempTests = 5
 
-#GeneralVariables
-TimeToSleepAfterTRIGFalse = .55
+TimeToSleepAfterTRIGFalse = .65
 TriggerDuration = 0.00001
 TotalDistance = 0
 MaxDistance = 0
@@ -29,14 +32,14 @@ DataLogFileName = "/home/pi/cistern/DataLogFile"
 ProgramLogFileName = "/home/pi/cistern/ProgramLogFile"
 GooglePostSuccess = "Data appended successfully."
 
+#Measurment adjustment after real world measurements are taken
+Sensor1DistanceOffset = 0.86
+Sensor2DistanceOffset = 0.94
+
 #Get command line parameters
 SensorNumber = int(sys.argv[1])
 NumberOfSamples = int(sys.argv[2])
 TestMode = int(sys.argv[3])
-
-#Measurment adjustment after real world measurements are taken
-Sensor1DistanceOffset = -0.8
-Sensor2DistanceOffset = -1.15
 
 #Define GPIO pins for sensor relays and delay after powering relays
 Sensor1SwitchPin = 5
@@ -44,6 +47,20 @@ Sensor2SwitchPin = 6
 TimeToSleepAfterPoweringSensor = .5
 # 28 Jul 2017 - Both sensors use the same trigger
 TRIG = 23
+
+# End Variables section
+############################################################################
+
+#Function to test for valid temperature
+def funValidTemp(TestTemp):
+# 30 July 2017 - Appears sometimes the probe returns a flat max of 185 deg F.
+# print "TestTemp: ", TestTemp
+ if TestTemp == 185.0:
+  return 0
+ # End if
+ # If all tests pass we'll end up here, return as a valid temp
+ return 1
+# End function
 
 #Function for reading the temperature files
 def read_temp(DeviceFile):
@@ -57,18 +74,39 @@ def read_temp(DeviceFile):
     if equals_pos != -1:
         temp_string = lines[1][equals_pos+2:]
         temp_c = float(temp_string) / 1000.0
-        temp_f = temp_c * 9.0 / 5.0 + 32.0
+        temp_f = round((temp_c * 9.0 / 5.0 + 32.0),1)
         return temp_f
 #End Temperature function
 
+def funGetTemp(SensorDeviceFile):
+#Set to 0 to force into the loop
+ ValidTemp = 0
+ NumTests = 0
+
+ while (ValidTemp != 1) and (NumTests < MaxTempTests):
+  NumTests = NumTests + 1
+#  print "Test ",NumTests
+  time.sleep(1)
+  SensorTemp = read_temp(SensorDeviceFile)
+#  SensorTemp = 185.0
+  if funValidTemp(SensorTemp) == 0:
+#   print "INVALID TEMP"
+   SensorTemp = ""
+  else:
+   ValidTemp = 1
+#   print "VALID TEMP"
+# End while
+ return SensorTemp
+# End Function funGetTemp
+
 time.sleep(1)
-BrownCisternAir = round(read_temp(TempFileBrownCisternAir),1)
+BrownCisternAir = funGetTemp(TempFileBrownCisternAir)
 time.sleep(1)
-OrangeOutsideAir = round(read_temp(TempFileOrangeOutsideAir),1)
+OrangeOutsideAir = funGetTemp(TempFileOrangeOutsideAir)
 time.sleep(1)
-GreenOutsideOnCistern = round(read_temp(TempFileGreenOutsideOnCistern),1)
+GreenOutsideOnCistern = funGetTemp(TempFileGreenOutsideOnCistern)
 time.sleep(1)
-BlueWater = round(read_temp(TempFileBlueWater),1)
+BlueWater = funGetTemp(TempFileBlueWater)
 
 if TestMode == 1:
  print "Cistern Air        : ",BrownCisternAir
@@ -100,7 +138,7 @@ if SensorNumber == 2:
 
 #Mounting height of sensor (cm)
 #SensorHeight = 289.56
-SensorHeight = 289.4
+SensorHeight = 289.24
 
 #Gallons per cm, based on 5000 gallons per foot
 GallonsPerCentimeter = 164.04
